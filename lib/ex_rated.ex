@@ -174,8 +174,9 @@ defmodule ExRated do
   end
 
   def terminate(_reason, state) do
+    %{table_name: table_name} = state
     # if persistent is true save ETS table on disk and then close DETS table
-    if persistent?(state), do: persist_and_close(state)
+    if persistent?(state), do: persist_and_close(table_name)
 
     :ok
   end
@@ -195,33 +196,15 @@ defmodule ExRated do
     Map.get(state, :persistent) == true
   end
 
-  defp persist_and_close(state) do
-    Storage.persist_and_close(state)
+  defp persist_and_close(table_name) do
+    Storage.persist(table_name)
+    Storage.close(table_name)
   end
 
   defp count_hit(id, scale, limit, table_name) do
     {stamp, key} = stamp_key(id, scale)
 
-    case Storage.contains(table_name, key) do
-      false ->
-        # Insert Key {bucket_number, id} with counter (1), created_at (timestamp), updated_at (timestamp)
-        # The first element of the four element Tuple becomes the key.
-
-        Storage.set(table_name, {key, 1, stamp, stamp})
-
-        {:ok, 1}
-
-      true ->
-        # Increment counter by 1, increment created_at by 0 (no-op), and updated_at to current timestamp
-
-        [counter, _, _] = Storage.update_counter(table_name, key, [{2, 1},{3, 0},{4, 1, 0, stamp}])
-
-        if (counter > limit) do
-          {:error, limit}
-        else
-          {:ok, counter}
-        end
-    end
+    Storage.update_counter(table_name, key, limit, stamp)
   end
 
   defp inspect_bucket(id, scale, limit, table_name) do

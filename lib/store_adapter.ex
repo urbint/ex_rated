@@ -25,6 +25,21 @@ defmodule ExRated.Storage do
   end
 
   @doc """
+  Closes the connection to the datastore.
+  NOTE: May be specific to ETS and not other datastores.
+
+  """
+  @callback close(
+    store_name :: String.t
+  ) :: :ok | {:error, reason :: String.t}
+  @spec close(
+    store_name :: String.t
+  ) :: :ok | {:error, reason :: String.t}
+  def close(store_name) do
+    @engine.close(store_name)
+  end
+
+  @doc """
   Queries the datastore for the existence of a value or values stored at the specified key.
 
   """
@@ -56,10 +71,18 @@ defmodule ExRated.Storage do
     @engine.get(store_name, key)
   end
 
-  @callback persist_and_close(state :: %{}) :: :ok | {:error, reason :: String.t}
-  @spec persist_and_close(state :: %{}) :: :ok | {:error, reason :: String.t}
-  def persist_and_close(state) do
-    @engine.persist_and_close(state)
+  @doc """
+  NOTE: May be specific to ETS and not other datastores.
+
+  """
+  @callback persist(
+    store_name :: String.t
+  ) :: :ok | {:error, reason :: String.t}
+  @spec persist(
+    store_name :: String.t
+  ) :: :ok | {:error, reason :: String.t}
+  def persist(store_name) do
+    @engine.persist(store_name)
   end
 
   @callback select_delete(
@@ -97,68 +120,17 @@ defmodule ExRated.Storage do
   @callback update_counter(
     store_name :: String.t,
     key        :: String.t,
-    values     :: List
+    limit      :: non_neg_integer,
+    stamp      :: any
   ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
   @spec update_counter(
     store_name :: String.t,
     key        :: String.t,
-    values     :: List
+    limit      :: non_neg_integer,
+    stamp      :: any
   ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
-  def update_counter(store_name, key, values) do
-    @engine.update_counter(store_name, key, values)
-  end
-
-end
-
-
-defmodule ETSStorage do
-  @moduledoc """
-  Implementation of the storage adaptor for the Erlang Term Storage (ETS) mechanism.
-
-  """
-
-  @behaviour ExRated.Storage
-
-  def initialize_store(store_name, false, options) do
-    :ets.new(store_name, options)
-  end
-
-  def initialize_store(store_name, true, options) do
-    initialize_store(store_name, false, options)
-
-    :dets.open_file(store_name, [{:file, store_name}, {:repair, true}])
-    :ets.delete_all_objects(store_name)
-    :ets.from_dets(store_name, store_name)
-  end
-
-  def set(store_name, key_values) do
-    :ets.insert(store_name, key_values)
-  end
-
-  def get(store_name, key) do
-    :ets.lookup(store_name, key)
-  end
-
-  def persist(state) do
-    %{table_name: table_name} = state
-    :ets.to_dets(table_name, table_name)
-  end
-
-  def persist_and_close(state) do
-    persist(state)
-    :dets.close(Map.get(state, :ets_table_name))
-  end
-
-  def update_counter(store_name, key, values) do
-    :ets.update_counter(store_name, key, values)
-  end
-
-  def contains(store_name, key) do
-    :ets.member(store_name, key)
-  end
-
-  def select_delete(store_name, function) do
-    :ets.select_delete(store_name, function)
+  def update_counter(store_name, key, limit, stamp) do
+    @engine.update_counter(store_name, key, limit, stamp)
   end
 
 end
