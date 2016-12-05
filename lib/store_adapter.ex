@@ -1,6 +1,6 @@
 defmodule ExRated.Storage do
   @moduledoc """
-  Explanation here...
+  Adapter for plug-in storage.
 
   """
 
@@ -112,6 +112,10 @@ end
 
 
 defmodule ETSStorage do
+  @moduledoc """
+  Implementation of the storage adaptor for the Erlang Term Storage (ETS) mechanism.
+
+  """
 
   @behaviour ExRated.Storage
 
