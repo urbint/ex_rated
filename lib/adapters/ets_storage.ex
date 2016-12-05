@@ -1,6 +1,6 @@
-defmodule ETSStorage do
+defmodule ExRated.Adapters.ETSStorage do
   @moduledoc """
-  Implementation of the storage adapter for the Erlang Term Storage (ETS) mechanism.
+  Implementation of the storage adapter for Erlang Term Storage (ETS).
 
   """
 

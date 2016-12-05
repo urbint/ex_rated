@@ -165,7 +165,8 @@ defmodule ExRated do
 
   def handle_info(:prune, state) do
     %{timeout: timeout, table_name: table_name} = state
-    prune_expired_buckets(timeout, table_name)
+    Storage.prune_expired_buckets(table_name, timeout)
+
     {:noreply, state}
   end
 
@@ -238,13 +239,10 @@ defmodule ExRated do
     alias ExRated.Helpers
 
     stamp         = Helpers.timestamp()
-    bucket_number = trunc(stamp/scale)      # with scale = 1 bucket changes every millisecond
+    bucket_number = trunc(stamp / scale) # with scale = 1 bucket changes every millisecond
     key           = {bucket_number, id}
-    {stamp, key}
-  end
 
-  defp prune_expired_buckets(timeout, table_name) do
-    Storage.prune_expired_buckets(table_name, timeout)
+    {stamp, key}
   end
 
 end

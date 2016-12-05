@@ -4,7 +4,7 @@ defmodule ExRated.Storage do
 
   """
 
-  @engine Application.get_env(:ex_rated, :storage_adapter, ETSStorage)
+  @engine Application.get_env(:ex_rated, :storage_adapter, ExRated.Adapters.ETSStorage)
 
   @doc """
   Initializes the storage service.
@@ -26,7 +26,6 @@ defmodule ExRated.Storage do
 
   @doc """
   Closes the connection to the datastore.
-  NOTE: May be specific to ETS and not other datastores.
 
   """
   @callback close(
@@ -72,6 +71,7 @@ defmodule ExRated.Storage do
   end
 
   @doc """
+  Persists in-memory storage to a file.
   NOTE: May be specific to ETS and not other datastores.
 
   """
@@ -113,7 +113,7 @@ defmodule ExRated.Storage do
     @engine.set(store_name, key_value_pair)
   end
 
-  @doc"""
+  @doc """
   Removes old buckets and returns the number removed.
 
   """
