@@ -16,6 +16,8 @@ defmodule ExRated do
     welcome.
   """
 
+  alias ExRated.Storage
+
   ## Client API
 
   @doc """
@@ -24,10 +26,10 @@ defmodule ExRated do
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__,
                         [
-                           {:timeout,        Application.get_env(:ex_rated, :timeout) || 90_000_000},
-                           {:cleanup_rate,   Application.get_env(:ex_rated, :cleanup_rate) || 60_000},
-                           {:ets_table_name, Application.get_env(:ex_rated, :ets_table_name) || :ex_rated_buckets},
-                           {:persistent,     Application.get_env(:ex_rated, :persistent) || false},
+                           {:timeout,       Application.get_env(:ex_rated, :timeout) || 90_000_000},
+                           {:cleanup_rate,  Application.get_env(:ex_rated, :cleanup_rate) || 60_000},
+                           {:table_name,    Application.get_env(:ex_rated, :table_name) || :ex_rated_buckets},
+                           {:persistent,    Application.get_env(:ex_rated, :persistent) || false},
                         ], opts)
   end
 
@@ -116,14 +118,19 @@ defmodule ExRated do
     [
       {:timeout, timeout},
       {:cleanup_rate, cleanup_rate},
-      {:ets_table_name, ets_table_name},
+
+      {:table_name, table_name},
       {:persistent, persistent}
     ] = args
 
-    open_table(ets_table_name, persistent || false)
+    open_table(table_name, persistent || false)
     :timer.send_interval(cleanup_rate, :prune)
-    {:ok, %{timeout: timeout, cleanup_rate: cleanup_rate,
-      ets_table_name: ets_table_name, persistent: persistent}}
+    {:ok, %{
+      timeout: timeout,
+      cleanup_rate: cleanup_rate,
+      table_name: table_name,
+      persistent: persistent
+    }}
   end
 
   def handle_call(:stop, _from, state) do
@@ -131,20 +138,20 @@ defmodule ExRated do
   end
 
   def handle_call({:check_rate, id, scale, limit}, _from, state) do
-    %{ets_table_name: ets_table_name} = state
-    result = count_hit(id, scale, limit, ets_table_name)
+    %{table_name: table_name} = state
+    result = count_hit(id, scale, limit, table_name)
     {:reply, result, state}
   end
 
   def handle_call({:inspect_bucket, id, scale, limit}, _from, state) do
-    %{ets_table_name: ets_table_name} = state
-    result = inspect_bucket(id, scale, limit, ets_table_name)
+    %{table_name: table_name} = state
+    result = inspect_bucket(id, scale, limit, table_name)
     {:reply, result, state}
   end
 
   def handle_call({:delete_bucket, id}, _from, state) do
-    %{ets_table_name: ets_table_name} = state
-    result = delete_bucket(id, ets_table_name)
+    %{table_name: table_name} = state
+    result = delete_bucket(id, table_name)
     {:reply, result, state}
   end
 
@@ -157,8 +164,8 @@ defmodule ExRated do
   end
 
   def handle_info(:prune, state) do
-    %{timeout: timeout, ets_table_name: ets_table_name} = state
-    prune_expired_buckets(timeout, ets_table_name)
+    %{timeout: timeout, table_name: table_name} = state
+    prune_expired_buckets(timeout, table_name)
     {:noreply, state}
   end
 
@@ -180,43 +187,34 @@ defmodule ExRated do
 
   ## Private Functions
 
-  defp open_table(ets_table_name, false) do
-    :ets.new(ets_table_name, [:named_table, :ordered_set, :private])
-  end
-
-  defp open_table(ets_table_name, true) do
-    open_table(ets_table_name, false)
-    :dets.open_file(ets_table_name, [{:file, ets_table_name}, {:repair, true}])
-    :ets.delete_all_objects(ets_table_name)
-    :ets.from_dets(ets_table_name, ets_table_name)
+  defp open_table(table_name, persistent?) do
+    Storage.initialize_store(table_name, persistent?, [:named_table, :ordered_set, :private])
   end
 
   defp persistent?(state) do
     Map.get(state, :persistent) == true
   end
 
-  defp persist(state) do
-    %{ets_table_name: ets_table_name} = state
-    :ets.to_dets(ets_table_name, ets_table_name)
-  end
-
   defp persist_and_close(state) do
-    persist(state)
-    :dets.close(Map.get(state, :ets_table_name))
+    Storage.persist_and_close(state)
   end
 
-  defp count_hit(id, scale, limit, ets_table_name) do
+  defp count_hit(id, scale, limit, table_name) do
     {stamp, key} = stamp_key(id, scale)
 
-    case :ets.member(ets_table_name, key) do
+    case Storage.contains(table_name, key) do
       false ->
         # Insert Key {bucket_number, id} with counter (1), created_at (timestamp), updated_at (timestamp)
         # The first element of the four element Tuple becomes the key.
-        true = :ets.insert(ets_table_name, {key, 1, stamp, stamp})
+
+        Storage.set(table_name, {key, 1, stamp, stamp})
+
         {:ok, 1}
+
       true ->
         # Increment counter by 1, increment created_at by 0 (no-op), and updated_at to current timestamp
-        [counter, _, _] = :ets.update_counter(ets_table_name, key, [{2,1},{3,0},{4,1,0, stamp}])
+
+        [counter, _, _] = Storage.update_counter(table_name, key, [{2, 1},{3, 0},{4, 1, 0, stamp}])
 
         if (counter > limit) do
           {:error, limit}
@@ -226,25 +224,30 @@ defmodule ExRated do
     end
   end
 
-  defp inspect_bucket(id, scale, limit, ets_table_name) do
+  defp inspect_bucket(id, scale, limit, table_name) do
     {stamp, key} = stamp_key(id, scale)
     ms_to_next_bucket = (elem(key, 0) * scale) + scale - stamp
 
-    case :ets.member(ets_table_name, key) do
+    case Storage.contains(table_name, key) do
       false ->
         {0, limit, ms_to_next_bucket, nil, nil}
+
       true ->
-        [{_, count, created_at, updated_at}] = :ets.lookup(ets_table_name, key)
+        [{_, count, created_at, updated_at}] = Storage.get(table_name, key)
         count_remaining = if limit > count, do: limit - count, else: 0
         {count, count_remaining, ms_to_next_bucket, created_at, updated_at}
     end
   end
 
-  defp delete_bucket(id, ets_table_name) do
+  defp delete_bucket(id, table_name) do
     import Ex2ms
-    case :ets.select_delete(ets_table_name, fun do {{bucket_number, bid},_,_,_} when bid == ^id -> true end) do
-      1 -> :ok
-      _ -> :error
+
+    case Storage.select_delete(table_name, fun do {{bucket_number, bid}, _, _, _} when bid == ^id -> true end) do
+      1 ->
+        :ok
+
+      _ ->
+        :error
     end
   end
 
@@ -256,14 +259,15 @@ defmodule ExRated do
   end
 
   # Removes old buckets and returns the number removed.
-  defp prune_expired_buckets(timeout, ets_table_name) do
+  defp prune_expired_buckets(timeout, table_name) do
     # Ex2ms does for Elixir what :ets.fun2ms() does for Erlang code.
     # It creates a match spec for use in :ets.select_delete directly.
     # See : https://github.com/ericmj/ex2ms
     # See : http://www.erlang.org/doc/man/ms_transform.html
     import Ex2ms
     now_stamp = timestamp()
-    :ets.select_delete(ets_table_name, fun do {_,_,_,updated_at} when updated_at < (^now_stamp - ^timeout) -> true end)
+
+    Storage.select_delete(table_name, fun do {_,_,_,updated_at} when updated_at < (^now_stamp - ^timeout) -> true end)
   end
 
   # Returns Erlang Time as milliseconds since 00:00 GMT, January 1, 1970
