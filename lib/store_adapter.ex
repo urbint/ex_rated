@@ -85,16 +85,16 @@ defmodule ExRated.Storage do
     @engine.persist(store_name)
   end
 
-  @callback select_delete(
+  @callback delete_bucket_by_id(
     store_name :: String.t,
-    function   :: Function.t
-  ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
-  @spec select_delete(
+    id :: any
+  ) :: :ok | {:error, reason :: String.t}
+  @spec delete_bucket_by_id(
     store_name :: String.t,
-    function   :: Function.t
-  ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
-  def select_delete(store_name, function) do
-    @engine.select_delete(store_name, function)
+    id :: any
+  ) :: :ok | {:error, reason :: String.t}
+  def delete_bucket_by_id(store_name, id) do
+    @engine.delete_bucket_by_id(store_name, id)
   end
 
   @doc """
@@ -111,6 +111,22 @@ defmodule ExRated.Storage do
   ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
   def set(store_name, key_value_pair) do
     @engine.set(store_name, key_value_pair)
+  end
+
+  @doc"""
+  Removes old buckets and returns the number removed.
+
+  """
+  @callback prune_expired_buckets(
+    store_name :: String.t,
+    timeout    :: any
+  ) :: num_pruned :: non_neg_integer | {:error, reason :: String.t}
+  @spec prune_expired_buckets(
+    store_name :: String.t,
+    timeout    :: any
+  ) :: num_pruned :: non_neg_integer | {:error, reason :: String.t}
+  def prune_expired_buckets(store_name, timeout) do
+    @engine.prune_expired_buckets(store_name, timeout)
   end
 
   @doc """

@@ -34,8 +34,19 @@ defmodule ETSStorage do
     :ets.to_dets(store_name, store_name)
   end
 
-  def select_delete(store_name, function) do
-    :ets.select_delete(store_name, function)
+  def delete_bucket_by_id(store_name, id) do
+    import Ex2ms
+
+    :ets.select_delete(store_name, fun do {{bucket_number, bid}, _, _, _} when bid == ^id -> true end)
+  end
+
+  def prune_expired_buckets(store_name, timeout) do
+    alias ExRated.Helpers
+    import Ex2ms
+
+    now_stamp = Helpers.timestamp()
+
+    :ets.select_delete(store_name, fun do {_,_,_,updated_at} when updated_at < (^now_stamp - ^timeout) -> true end)
   end
 
   def set(store_name, key_values) do

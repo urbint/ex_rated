@@ -225,7 +225,7 @@ defmodule ExRated do
   defp delete_bucket(id, table_name) do
     import Ex2ms
 
-    case Storage.select_delete(table_name, fun do {{bucket_number, bid}, _, _, _} when bid == ^id -> true end) do
+    case Storage.delete_bucket_by_id(table_name, id) do
       1 ->
         :ok
 
@@ -235,36 +235,16 @@ defmodule ExRated do
   end
 
   defp stamp_key(id, scale) do
-    stamp         = timestamp()
+    alias ExRated.Helpers
+
+    stamp         = Helpers.timestamp()
     bucket_number = trunc(stamp/scale)      # with scale = 1 bucket changes every millisecond
     key           = {bucket_number, id}
     {stamp, key}
   end
 
-  # Removes old buckets and returns the number removed.
   defp prune_expired_buckets(timeout, table_name) do
-    # Ex2ms does for Elixir what :ets.fun2ms() does for Erlang code.
-    # It creates a match spec for use in :ets.select_delete directly.
-    # See : https://github.com/ericmj/ex2ms
-    # See : http://www.erlang.org/doc/man/ms_transform.html
-    import Ex2ms
-    now_stamp = timestamp()
-
-    Storage.select_delete(table_name, fun do {_,_,_,updated_at} when updated_at < (^now_stamp - ^timeout) -> true end)
-  end
-
-  # Returns Erlang Time as milliseconds since 00:00 GMT, January 1, 1970
-  defp timestamp()
-    case ExRated.Utils.get_otp_release() do
-      ver when ver >= 18 ->
-        defp timestamp(), do: :erlang.system_time(:milli_seconds)
-      _ ->
-        defp timestamp(), do: timestamp(:erlang.now())
-  end
-
-  # OTP > 18
-  defp timestamp({mega, sec, micro}) do
-    1000 * (mega * 1000000 + sec) + round(micro/1000)
+    Storage.prune_expired_buckets(table_name, timeout)
   end
 
 end
