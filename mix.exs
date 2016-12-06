@@ -24,11 +24,10 @@ defmodule ExRated.Mixfile do
   def application do
     [applications: [:logger],
      env: [
-       timeout:         90_000_000,
-       cleanup_rate:    60_000,
-       table_name:      :ex_rated_buckets,
-       storage_config:  %{},
-       persistent:      false,
+       timeout:       90_000_000,
+       cleanup_rate:  60_000,
+       table_name:    :ex_rated_buckets,
+       persistent:    false
      ],
      mod: {ExRated.App, []}]
   end

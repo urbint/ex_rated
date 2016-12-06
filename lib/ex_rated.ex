@@ -29,7 +29,6 @@ defmodule ExRated do
                            {:timeout,         Application.get_env(:ex_rated, :timeout) || 90_000_000},
                            {:cleanup_rate,    Application.get_env(:ex_rated, :cleanup_rate) || 60_000},
                            {:table_name,      Application.get_env(:ex_rated, :table_name) || :ex_rated_buckets},
-                           {:storage_config,  Application.get_env(:ex_rated, :storage_config) || %{}},
                            {:persistent,      Application.get_env(:ex_rated, :persistent) || false},
                         ], opts)
   end
@@ -120,11 +119,10 @@ defmodule ExRated do
       {:timeout, timeout},
       {:cleanup_rate, cleanup_rate},
       {:table_name, table_name},
-      {:storage_config, storage_config},
       {:persistent, persistent}
     ] = args
 
-    open_table(table_name, persistent, storage_config)
+    open_table(table_name, persistent)
     :timer.send_interval(cleanup_rate, :prune)
     {:ok, %{
       timeout: timeout,
@@ -190,8 +188,8 @@ defmodule ExRated do
 
   ## Private Functions
 
-  defp open_table(table_name, persistent?, storage_config) do
-    Storage.initialize_store(table_name, persistent?, storage_config)
+  defp open_table(table_name, persistent?) do
+    Storage.initialize_store(table_name, persistent?)
   end
 
   defp persistent?(state) do
@@ -225,8 +223,6 @@ defmodule ExRated do
   end
 
   defp delete_bucket(id, table_name) do
-    import Ex2ms
-
     case Storage.delete_bucket_by_id(table_name, id) do
       1 ->
         :ok
@@ -239,9 +235,9 @@ defmodule ExRated do
   defp stamp_key(id, scale) do
     alias ExRated.Helpers
 
-    stamp         = Helpers.timestamp()
+    stamp = Helpers.timestamp()
     bucket_number = trunc(stamp / scale) # with scale = 1 bucket changes every millisecond
-    key           = {bucket_number, id}
+    key = {bucket_number, id}
 
     {stamp, key}
   end

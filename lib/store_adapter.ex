@@ -12,16 +12,14 @@ defmodule ExRated.Storage do
   """
   @callback initialize_store(
     store_name  :: :atom,
-    persistent? :: boolean,
-    options     :: %{...}
+    persistent? :: boolean
   ) :: :ok | {:error, reason :: String.t}
   @spec initialize_store(
     store_name  :: :atom,
-    persistent? :: boolean,
-    options     :: %{...}
+    persistent? :: boolean
   ) :: :ok | {:error, reason :: String.t}
-  def initialize_store(store_name, persistent?, options) do
-    @engine.initialize_store(store_name, persistent?, options)
+  def initialize_store(store_name, persistent?) do
+    @engine.initialize_store(store_name, persistent?)
   end
 
   @doc """
@@ -44,12 +42,12 @@ defmodule ExRated.Storage do
   """
   @callback contains(
     store_name :: :atom,
-    key        :: :atom
+    key        :: tuple
   ) :: :ok | {:error, reason :: String.t}
   @spec contains(
     store_name :: :atom,
-    key        :: :atom
-  ) :: boolean
+    key        :: tuple
+  ) :: :ok | {:error, reason :: String.t}
   def contains(store_name, key) do
     @engine.contains(store_name, key)
   end

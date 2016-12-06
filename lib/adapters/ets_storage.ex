@@ -6,18 +6,14 @@ defmodule ExRated.Adapters.ETSStorage do
 
   @behaviour ExRated.Storage
 
-  def initialize_store(store_name, false, storage_config) do
-    # ETS expects the storage_config to be a list of atoms.
-    config_list = for {key, _} <- storage_config, do: key
+  @default_storage_options Application.get_env(:ex_rated, :default_storage_options, [:named_table, :ordered_set, :private])
 
-    :ets.new(store_name, config_list)
+  def initialize_store(store_name, false) do
+    :ets.new(store_name, @default_storage_options)
   end
 
-  def initialize_store(store_name, true, storage_config) do
-    # ETS expects the storage_config to be a list of atoms.
-    config_list = for {key, _} <- storage_config, do: key
-
-    :ets.new(store_name, config_list)
+  def initialize_store(store_name, true) do
+    :ets.new(store_name, @default_storage_options)
     :dets.open_file(store_name, [{:file, store_name}, {:repair, true}])
     :ets.delete_all_objects(store_name)
     :ets.from_dets(store_name, store_name)
@@ -68,7 +64,7 @@ defmodule ExRated.Adapters.ETSStorage do
         [counter, _, _] = :ets.update_counter(store_name, key, [{2, 1}, {3, 0}, {4, 1, 0, stamp}])
 
         if (counter > limit) do
-          {:error, "Rate limit of #{limit} exceeded."}
+          {:error, 2}
         else
           {:ok, counter}
         end
