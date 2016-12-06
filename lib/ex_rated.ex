@@ -233,7 +233,7 @@ defmodule ExRated do
   end
 
   defp stamp_key(id, scale) do
-    alias ExRated.Helpers
+    alias ExRated.Common.Helpers
 
     stamp = Helpers.timestamp()
     bucket_number = trunc(stamp / scale) # with scale = 1 bucket changes every millisecond

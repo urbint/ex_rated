@@ -1,4 +1,4 @@
-defmodule ExRated.Helpers do
+defmodule ExRated.Common.Helpers do
   @moduledoc """
   Helper functions for the Ex-Rated library.
 

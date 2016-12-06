@@ -42,7 +42,7 @@ defmodule ExRated.Adapters.ETSStorage do
   end
 
   def prune_expired_buckets(store_name, timeout) do
-    alias ExRated.Helpers
+    alias ExRated.Common.Helpers
     import Ex2ms
 
     now_stamp = Helpers.timestamp()
