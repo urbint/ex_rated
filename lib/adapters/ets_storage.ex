@@ -6,13 +6,18 @@ defmodule ExRated.Adapters.ETSStorage do
 
   @behaviour ExRated.Storage
 
-  def initialize_store(store_name, false, options) do
-    :ets.new(store_name, options)
+  def initialize_store(store_name, false, storage_config) do
+    # ETS expects the storage_config to be a list of atoms.
+    config_list = for {key, _} <- storage_config, do: key
+
+    :ets.new(store_name, config_list)
   end
 
-  def initialize_store(store_name, true, options) do
-    initialize_store(store_name, false, options)
+  def initialize_store(store_name, true, storage_config) do
+    # ETS expects the storage_config to be a list of atoms.
+    config_list = for {key, _} <- storage_config, do: key
 
+    :ets.new(store_name, config_list)
     :dets.open_file(store_name, [{:file, store_name}, {:repair, true}])
     :ets.delete_all_objects(store_name)
     :ets.from_dets(store_name, store_name)
@@ -53,15 +58,6 @@ defmodule ExRated.Adapters.ETSStorage do
     :ets.insert(store_name, key_values)
   end
 
-  @doc """
-  Atomically update the ETS table.
-
-  """
-  def update_counter(store_name, key, values) do
-    :ets.update_counter(store_name, key, values)
-  end
-
-
   def update_counter(store_name, key, limit, stamp) do
     case contains(store_name, key) do
       false ->
@@ -72,7 +68,7 @@ defmodule ExRated.Adapters.ETSStorage do
         [counter, _, _] = :ets.update_counter(store_name, key, [{2, 1}, {3, 0}, {4, 1, 0, stamp}])
 
         if (counter > limit) do
-          {:error, limit}
+          {:error, "Rate limit of #{limit} exceeded."}
         else
           {:ok, counter}
         end

@@ -26,10 +26,11 @@ defmodule ExRated do
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__,
                         [
-                           {:timeout,       Application.get_env(:ex_rated, :timeout) || 90_000_000},
-                           {:cleanup_rate,  Application.get_env(:ex_rated, :cleanup_rate) || 60_000},
-                           {:table_name,    Application.get_env(:ex_rated, :table_name) || :ex_rated_buckets},
-                           {:persistent,    Application.get_env(:ex_rated, :persistent) || false},
+                           {:timeout,         Application.get_env(:ex_rated, :timeout) || 90_000_000},
+                           {:cleanup_rate,    Application.get_env(:ex_rated, :cleanup_rate) || 60_000},
+                           {:table_name,      Application.get_env(:ex_rated, :table_name) || :ex_rated_buckets},
+                           {:storage_config,  Application.get_env(:ex_rated, :storage_config) || %{}},
+                           {:persistent,      Application.get_env(:ex_rated, :persistent) || false},
                         ], opts)
   end
 
@@ -118,12 +119,12 @@ defmodule ExRated do
     [
       {:timeout, timeout},
       {:cleanup_rate, cleanup_rate},
-
       {:table_name, table_name},
+      {:storage_config, storage_config},
       {:persistent, persistent}
     ] = args
 
-    open_table(table_name, persistent || false)
+    open_table(table_name, persistent, storage_config)
     :timer.send_interval(cleanup_rate, :prune)
     {:ok, %{
       timeout: timeout,
@@ -189,8 +190,8 @@ defmodule ExRated do
 
   ## Private Functions
 
-  defp open_table(table_name, persistent?) do
-    Storage.initialize_store(table_name, persistent?, [:named_table, :ordered_set, :private])
+  defp open_table(table_name, persistent?, storage_config) do
+    Storage.initialize_store(table_name, persistent?, storage_config)
   end
 
   defp persistent?(state) do

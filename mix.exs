@@ -23,7 +23,13 @@ defmodule ExRated.Mixfile do
   # ets_table_name : the registered name of the ETS table where buckets are stored.
   def application do
     [applications: [:logger],
-     env: [timeout: 90_000_000, cleanup_rate: 60_000, ets_table_name: :ex_rated_buckets],
+     env: [
+       timeout:         90_000_000,
+       cleanup_rate:    60_000,
+       table_name:      :ex_rated_buckets,
+       storage_config:  %{},
+       persistent:      false,
+     ],
      mod: {ExRated.App, []}]
   end
 

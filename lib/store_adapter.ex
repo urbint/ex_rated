@@ -11,14 +11,14 @@ defmodule ExRated.Storage do
 
   """
   @callback initialize_store(
-    store_name  :: String.t,
+    store_name  :: :atom,
     persistent? :: boolean,
-    options :: List # List of atoms
+    options     :: %{...}
   ) :: :ok | {:error, reason :: String.t}
   @spec initialize_store(
-    store_name  :: String.t,
+    store_name  :: :atom,
     persistent? :: boolean,
-    options :: List # List of atoms
+    options     :: %{...}
   ) :: :ok | {:error, reason :: String.t}
   def initialize_store(store_name, persistent?, options) do
     @engine.initialize_store(store_name, persistent?, options)
@@ -29,10 +29,10 @@ defmodule ExRated.Storage do
 
   """
   @callback close(
-    store_name :: String.t
+    store_name :: :atom
   ) :: :ok | {:error, reason :: String.t}
   @spec close(
-    store_name :: String.t
+    store_name :: :atom
   ) :: :ok | {:error, reason :: String.t}
   def close(store_name) do
     @engine.close(store_name)
@@ -43,12 +43,12 @@ defmodule ExRated.Storage do
 
   """
   @callback contains(
-    store_name :: String.t,
-    key        :: String.t
+    store_name :: :atom,
+    key        :: :atom
   ) :: :ok | {:error, reason :: String.t}
   @spec contains(
-    store_name :: String.t,
-    key        :: String.t
+    store_name :: :atom,
+    key        :: :atom
   ) :: boolean
   def contains(store_name, key) do
     @engine.contains(store_name, key)
@@ -59,12 +59,12 @@ defmodule ExRated.Storage do
 
   """
   @callback get(
-    store_name :: String.t,
-    key        :: String.t
+    store_name :: :atom,
+    key        :: :atom
   ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
   @spec get(
-    store_name :: String.t,
-    key        :: String.t
+    store_name :: :atom,
+    key        :: :atom
   ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
   def get(store_name, key) do
     @engine.get(store_name, key)
@@ -76,22 +76,26 @@ defmodule ExRated.Storage do
 
   """
   @callback persist(
-    store_name :: String.t
+    store_name :: :atom
   ) :: :ok | {:error, reason :: String.t}
   @spec persist(
-    store_name :: String.t
+    store_name :: :atom
   ) :: :ok | {:error, reason :: String.t}
   def persist(store_name) do
     @engine.persist(store_name)
   end
 
+  @doc """
+  Deletes a bucket specified by a unique identifier.
+
+  """
   @callback delete_bucket_by_id(
-    store_name :: String.t,
-    id :: any
+    store_name :: :atom,
+    id         :: any
   ) :: :ok | {:error, reason :: String.t}
   @spec delete_bucket_by_id(
-    store_name :: String.t,
-    id :: any
+    store_name :: :atom,
+    id         :: any
   ) :: :ok | {:error, reason :: String.t}
   def delete_bucket_by_id(store_name, id) do
     @engine.delete_bucket_by_id(store_name, id)
@@ -102,11 +106,11 @@ defmodule ExRated.Storage do
 
   """
   @callback set(
-    store_name     :: String.t,
+    store_name     :: :atom,
     key_value_pair :: tuple
   ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
   @spec set(
-    store_name     :: String.t,
+    store_name     :: :atom,
     key_value_pair :: tuple
   ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
   def set(store_name, key_value_pair) do
@@ -118,13 +122,13 @@ defmodule ExRated.Storage do
 
   """
   @callback prune_expired_buckets(
-    store_name :: String.t,
-    timeout    :: any
-  ) :: num_pruned :: non_neg_integer | {:error, reason :: String.t}
+    store_name :: :atom,
+    timeout    :: non_neg_integer
+  ) :: {:ok, num_pruned :: non_neg_integer} | {:error, reason :: String.t}
   @spec prune_expired_buckets(
-    store_name :: String.t,
-    timeout    :: any
-  ) :: num_pruned :: non_neg_integer | {:error, reason :: String.t}
+    store_name :: :atom,
+    timeout    :: non_neg_integer
+  ) :: {:ok, num_pruned :: non_neg_integer} | {:error, reason :: String.t}
   def prune_expired_buckets(store_name, timeout) do
     @engine.prune_expired_buckets(store_name, timeout)
   end
@@ -134,17 +138,17 @@ defmodule ExRated.Storage do
 
   """
   @callback update_counter(
-    store_name :: String.t,
-    key        :: String.t,
+    store_name :: :atom,
+    key        :: :atom,
     limit      :: non_neg_integer,
-    stamp      :: any
-  ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
+    stamp      :: non_neg_integer
+  ) :: {:ok, new_count :: non_neg_integer} | {:error, reason :: String.t}
   @spec update_counter(
-    store_name :: String.t,
-    key        :: String.t,
+    store_name :: :atom,
+    key        :: :atom,
     limit      :: non_neg_integer,
-    stamp      :: any
-  ) :: {:ok, non_neg_integer} | {:error, reason :: String.t}
+    stamp      :: non_neg_integer
+  ) :: {:ok, new_count :: non_neg_integer} | {:error, reason :: String.t}
   def update_counter(store_name, key, limit, stamp) do
     @engine.update_counter(store_name, key, limit, stamp)
   end
