@@ -1,4 +1,4 @@
 %{"benchwarmer": {:package, "0.0.1"},
-  "ex2ms": {:hex, :ex2ms, "1.4.0"},
-  "ex_doc": {:hex, :ex_doc, "0.11.4"},
+  "ex2ms": {:hex, :ex2ms, "1.4.0", "e43b410888b45ba363ea6650db3736db3e455a0a412ec244ac633fede857bcb2", [:mix], []},
+  "ex_doc": {:hex, :ex_doc, "0.11.4", "a064bdb720594c3745b94709b17ffb834fd858b4e0c1f48f37c0d92700759e02", [:mix], [{:earmark, "~> 0.1.17 or ~> 0.2", [hex: :earmark, optional: true]}]},
   "timex": {:package, "0.12.3"}}
